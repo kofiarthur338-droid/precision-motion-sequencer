@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Precision Motion Sequencer & Kinematic Simulator</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         WELCOME / ONBOARDING MODAL
+    ═══════════════════════════════════════════════════════════ -->
+    <div id="welcome-modal" class="welcome-modal-backdrop">
+        <div class="welcome-modal" role="dialog" aria-labelledby="welcome-title">
+
+            <!-- Animated robot icon -->
+            <div class="welcome-icon-wrap">
+                <span class="welcome-ring ring-1"></span>
+                <span class="welcome-ring ring-2"></span>
+                <i class="fa-solid fa-robot welcome-icon"></i>
+            </div>
+
+            <div class="welcome-badge">v2.0 · KINEMATIC ACCELERATOR</div>
+            <h2 id="welcome-title" class="welcome-title">Welcome to MOTION-X</h2>
+            <p class="welcome-subtitle">A professional robotic arm simulator with real-time PID control,
+                inverse kinematics, hardware code export, and an MRF recycling sorter mode.
+            </p>
+
+            <!-- Quick-start cards -->
+            <div class="welcome-cards">
+                <div class="welcome-card">
+                    <i class="fa-solid fa-list-check text-cyan"></i>
+                    <strong>Pick a Preset</strong>
+                    <span>Choose a task from the right panel dropdown</span>
+                </div>
+                <div class="welcome-card">
+                    <i class="fa-solid fa-play text-green"></i>
+                    <strong>Press RUN</strong>
+                    <span>Watch the arm execute the full motion sequence</span>
+                </div>
+                <div class="welcome-card">
+                    <i class="fa-solid fa-sliders text-amber"></i>
+                    <strong>Tune &amp; Explore</strong>
+                    <span>Adjust PID gains and physics disturbances live</span>
+                </div>
+            </div>
+
+            <div class="welcome-actions">
+                <button id="btn-welcome-tour" class="welcome-btn welcome-btn-primary">
+                    <i class="fa-solid fa-map-location-dot"></i> Take the Guided Tour
+                </button>
+                <button id="btn-welcome-skip" class="welcome-btn welcome-btn-ghost">
+                    I know what I'm doing — Skip
+                </button>
+            </div>
+
+            <p class="welcome-hint">
+                <i class="fa-solid fa-circle-info"></i>
+                You can restart this tour any time by clicking the
+                <strong style="color:var(--cyan)">?</strong> button in the header.
+            </p>
+        </div>
+    </div>
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-robot pulse-icon"></i>
+                <div class="logo-text">
+                    <h1>MOTION-X</h1>
+                    <span>KINEMATIC ACCELERATOR</span>
+                </div>
+            </div>
+            <div class="header-status">
+                <div class="status-item">
+                    <span class="status-label">SYSTEM STATE:</span>
+                    <span id="system-state" class="status-val state-idle">IDLE</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">RMS ERROR:</span>
+                    <span id="rms-error-display" class="status-val text-cyan">0.000 mm</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">TCP COORDS:</span>
+                    <span id="tcp-coords-display" class="status-val text-amber">X: 0.00, Y: 0.00, Z: 0.00</span>
+                </div>
+            </div>
+            <!-- Help / Tour Button -->
+            <button id="btn-help" class="help-btn" title="Open Beginner's Guide &amp; Tour">
+                <i class="fa-solid fa-circle-question"></i>
+                <span>HELP</span>
+            </button>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-main">
+            <!-- LEFT COLUMN: CONTROLS & PID TUNING -->
+            <section class="side-panel left-panel">
+                <div class="panel-header">
+                    <i class="fa-solid fa-sliders text-cyan"></i>
+                    <h2>CONTROLLER TUNING</h2>
+                    <span class="panel-info-icon" data-info="Adjust how the robot corrects its position errors. Higher Kp = faster response but possible oscillation. These values control the closed-loop PID servo system."
+                          title="What is this?"><i class="fa-solid fa-circle-info"></i></span>
+                </div>
+
+                <div class="panel-content scrollable">
+                    <!-- PID CONTROLLERS -->
+                    <div class="tuning-section">
+                        <h3><i class="fa-solid fa-gauge-high"></i> CLOSED-LOOP PID GAINS</h3>
+                        <p class="section-desc">Adjust controller gains in real-time to observe mechanical stability and error correction.</p>
+                        
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="gain-kp">Proportional (K<sub>p</sub>)</label>
+                                <span id="val-kp" class="slider-val text-cyan">15.0</span>
+                            </div>
+                            <input type="range" id="gain-kp" min="1" max="50" step="0.5" value="15.0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="gain-ki">Integral (K<sub>i</sub>)</label>
+                                <span id="val-ki" class="slider-val text-cyan">2.0</span>
+                            </div>
+                            <input type="range" id="gain-ki" min="0" max="10" step="0.1" value="2.0">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="gain-kd">Derivative (K<sub>d</sub>)</label>
+                                <span id="val-kd" class="slider-val text-cyan">6.0</span>
+                            </div>
+                            <input type="range" id="gain-kd" min="0" max="20" step="0.2" value="6.0">
+                        </div>
+                    </div>
+
+                    <!-- PHYSICS DISTURBANCES -->
+                    <div class="tuning-section">
+                        <h3><i class="fa-solid fa-tornado"></i> PHYSICAL DISTURBANCES</h3>
+                        <p class="section-desc">Simulate mechanical inaccuracies and environmental forces impacting precision.</p>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="dist-backlash">Mechanical Backlash</label>
+                                <span id="val-backlash" class="slider-val text-pink">0.05 mm</span>
+                            </div>
+                            <input type="range" id="dist-backlash" min="0" max="0.5" step="0.01" value="0.05">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="dist-friction">Joint Friction</label>
+                                <span id="val-friction" class="slider-val text-pink">0.10 N·m</span>
+                            </div>
+                            <input type="range" id="dist-friction" min="0" max="0.5" step="0.01" value="0.10">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="dist-gravity">Gravity Loading</label>
+                                <span id="val-gravity" class="slider-val text-pink">9.81 m/s²</span>
+                            </div>
+                            <input type="range" id="dist-gravity" min="0" max="20" step="0.5" value="9.8">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="dist-noise">Sensor / Encoder Noise</label>
+                                <span id="val-noise" class="slider-val text-pink">0.02 mm</span>
+                            </div>
+                            <input type="range" id="dist-noise" min="0" max="0.2" step="0.01" value="0.02">
+                        </div>
+                    </div>
+
+                    <!-- MOTION PROFILER LIMITS -->
+                    <div class="tuning-section">
+                        <h3><i class="fa-solid fa-bolt"></i> DYNAMIC LIMITS</h3>
+                        <p class="section-desc">Configure velocity profiling limits to minimize mechanical jerk.</p>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="limit-vel">Max Velocity</label>
+                                <span id="val-limit-vel" class="slider-val text-amber">100 mm/s</span>
+                            </div>
+                            <input type="range" id="limit-vel" min="20" max="250" step="5" value="100">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="limit-acc">Max Acceleration</label>
+                                <span id="val-limit-acc" class="slider-val text-amber">150 mm/s²</span>
+                            </div>
+                            <input type="range" id="limit-acc" min="20" max="500" step="10" value="150">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="slider-header">
+                                <label for="sim-speed">Simulation Speed Scale</label>
+                                <span id="val-sim-speed" class="slider-val text-green">1.0x</span>
+                            </div>
+                            <input type="range" id="sim-speed" min="0.1" max="3.0" step="0.1" value="1.0">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MIDDLE COLUMN: 3D VIEWPORT & TELEMETRY CHARTS -->
+            <section class="center-content">
+                <div class="viewport-wrapper">
+                    <!-- 3D Canvas container -->
+                    <div id="canvas-container"></div>
+
+                    <!-- Floating Viewport Controls -->
+                    <div class="viewport-controls">
+                        <button id="btn-toggle-grid" class="control-btn active" title="Toggle Grid"><i class="fa-solid fa-border-all"></i></button>
+                        <button id="btn-toggle-trail" class="control-btn active" title="Toggle Path Trail"><i class="fa-solid fa-signature"></i></button>
+                        <button id="btn-clear-trail" class="control-btn" title="Clear Path Trail"><i class="fa-solid fa-trash-can"></i></button>
+                        <button id="btn-reset-view" class="control-btn" title="Reset Camera View"><i class="fa-solid fa-camera-rotate"></i></button>
+                        <button id="btn-toggle-wireframe" class="control-btn" title="Toggle Wireframe"><i class="fa-solid fa-circle-nodes"></i></button>
+                    </div>
+
+                    <!-- Overlay Legend -->
+                    <div class="viewport-legend">
+                        <div class="legend-item"><span class="legend-color cyan"></span> Ideal Path</div>
+                        <div class="legend-item"><span class="legend-color magenta"></span> Actual Path (With Error)</div>
+                    </div>
+                </div>
+
+                <!-- Live Telemetry Graph Dashboard -->
+                <div class="telemetry-dashboard">
+                    <div class="dashboard-tabs">
+                        <button class="tab-btn active" data-tab="tab-chart-pos"><i class="fa-solid fa-chart-line"></i> TCP POSITION TRACKING</button>
+                        <button class="tab-btn" data-tab="tab-chart-error"><i class="fa-solid fa-chart-area"></i> RMS ERROR WAVEFORM</button>
+                    </div>
+                    <div class="dashboard-body">
+                        <div id="tab-chart-pos" class="tab-content active">
+                            <canvas id="chart-position" height="110"></canvas>
+                        </div>
+                        <div id="tab-chart-error" class="tab-content">
+                            <canvas id="chart-error" height="110"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT COLUMN: MOTION SEQUENCER & HARDWARE EXPORTER -->
+            <section class="side-panel right-panel">
+                <div class="panel-header">
+                    <i class="fa-solid fa-code text-cyan"></i>
+                    <h2>MOTION SEQUENCER</h2>
+                    <span class="panel-info-icon" data-info="Write or load a MotionScript program. The interpreter compiles each command into smooth, trapezoidally-profiled joint movements executed by the PID controller."
+                          title="What is this?"><i class="fa-solid fa-circle-info"></i></span>
+                </div>
+
+                <div class="panel-content flex-column-layout">
+                    <!-- Task Preset Selector -->
+                    <div class="task-selector-wrapper">
+                        <label for="task-select"><i class="fa-solid fa-list-check"></i> SELECT TASK PRESET</label>
+                        <div class="select-container">
+                            <select id="task-select">
+                                <option value="preset-engrave">Laser Engraving (Lissajous Profile)</option>
+                                <option value="preset-solder">Precision PCB Soldering Sequence</option>
+                                <option value="preset-pickplace">Automated MRF Recycling Sorter</option>
+                                <option value="preset-sweep">Full Joint Calibration Sweep</option>
+                                <option value="preset-custom">Custom Movement Program...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Action Controls -->
+                    <div class="sequencer-controls">
+                        <button id="btn-play" class="seq-btn btn-play" title="Run sequence"><i class="fa-solid fa-play"></i> RUN</button>
+                        <button id="btn-pause" class="seq-btn btn-pause" title="Pause sequence" disabled><i class="fa-solid fa-pause"></i> PAUSE</button>
+                        <button id="btn-step" class="seq-btn btn-step" title="Execute single line"><i class="fa-solid fa-forward-step"></i> STEP</button>
+                        <button id="btn-stop" class="seq-btn btn-stop" title="Stop & reset" disabled><i class="fa-solid fa-square"></i> STOP</button>
+                    </div>
+
+                    <!-- Workspace Mode / Tabs -->
+                    <div class="editor-tabs">
+                        <button class="editor-tab active" data-editor="editor-raw">SCRIPT EDITOR</button>
+                        <button class="editor-tab" data-editor="editor-arduino" id="tab-arduino-btn">ARDUINO CODE</button>
+                        <button class="editor-tab" data-editor="editor-gcode" id="tab-gcode-btn">G-CODE EXPORT</button>
+                    </div>
+
+                    <div class="editor-container">
+                        <!-- Script Editor -->
+                        <div id="editor-raw" class="editor-view active">
+                            <div class="editor-status-bar">
+                                <span>Language: MotionScript (.ms)</span>
+                                <span id="editor-line-col">Line 1, Col 1</span>
+                            </div>
+                            <div class="code-editor-wrapper">
+                                <div class="line-numbers" id="line-numbers"></div>
+                                <textarea id="code-textarea" spellcheck="false" autocomplete="off" wrap="off"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Arduino Code Export -->
+                        <div id="editor-arduino" class="editor-view">
+                            <div class="editor-status-bar">
+                                <span>Target: Arduino Mega (PID Stepper Control)</span>
+                                <button class="copy-btn" id="btn-copy-arduino"><i class="fa-solid fa-copy"></i> Copy</button>
+                            </div>
+                            <pre><code id="code-arduino-output" class="language-cpp">Loading generator...</code></pre>
+                        </div>
+
+                        <!-- G-Code Export -->
+                        <div id="editor-gcode" class="editor-view">
+                            <div class="editor-status-bar">
+                                <span>Target: Standard G-Code (.gcode)</span>
+                                <button class="copy-btn" id="btn-copy-gcode"><i class="fa-solid fa-copy"></i> Copy</button>
+                            </div>
+                            <pre><code id="code-gcode-output" class="language-gcode">Loading generator...</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Command Helper Guide -->
+                    <div class="command-guide">
+                        <h4><i class="fa-solid fa-circle-info text-amber"></i> MOTIONSCRIPT GUIDE</h4>
+                        <div class="guide-scroll scrollable">
+                            <ul>
+                                <li><code>MOVE X Y Z [F]</code> - Linear move to target TCP coordinate. Speed parameter <code>F</code> overrides max velocity.</li>
+                                <li><code>GRIPPER [OPEN/CLOSE]</code> - Open or close physical claw.</li>
+                                <li><code>TOOL [ON/OFF]</code> - Trigger laser/soldering heat tool.</li>
+                                <li><code>WAIT [ms]</code> - Dwell in place for specified duration.</li>
+                                <li><code>SPEED [vel] [acc]</code> - Sets global velocity (mm/s) and acceleration (mm/s²).</li>
+                                <li><code>HOME</code> - Move back to home calibration vector.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER & TELEMETRY GRID -->
+        <footer class="app-footer">
+            <div class="telemetry-tile">
+                <span class="tile-label">JOINT 1 (WAIST)</span>
+                <span class="tile-value text-cyan" id="j1-angle-val">0.00°</span>
+                <span class="tile-sub" id="j1-error-val">Err: 0.00°</span>
+            </div>
+            <div class="telemetry-tile">
+                <span class="tile-label">JOINT 2 (SHOULDER)</span>
+                <span class="tile-value text-cyan" id="j2-angle-val">0.00°</span>
+                <span class="tile-sub" id="j2-error-val">Err: 0.00°</span>
+            </div>
+            <div class="telemetry-tile">
+                <span class="tile-label">JOINT 3 (ELBOW)</span>
+                <span class="tile-value text-cyan" id="j3-angle-val">0.00°</span>
+                <span class="tile-sub" id="j3-error-val">Err: 0.00°</span>
+            </div>
+            <div class="telemetry-tile">
+                <span class="tile-label">VELOCITY PROFILE</span>
+                <span class="tile-value text-amber" id="telemetry-velocity">0.0 mm/s</span>
+                <span class="tile-sub" id="telemetry-acceleration">Acc: 0.0 mm/s²</span>
+            </div>
+            <div class="telemetry-tile">
+                <span class="tile-label">ACTIVE PROGRAM STEP</span>
+                <span class="tile-value text-green" id="telemetry-step">STEP: --/--</span>
+                <span class="tile-sub" id="telemetry-command">CMD: --</span>
+            </div>
+            <div class="telemetry-tile">
+                <span class="tile-label">HARDWARE CONTROLLER</span>
+                <span class="tile-value text-green" id="telemetry-hw-state"><i class="fa-solid fa-microchip"></i> SIMULATION</span>
+                <span class="tile-sub" id="telemetry-loop-rate">Loop Rate: 60Hz</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals or Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fa-solid fa-circle-check"></i> <span id="toast-message">Message copied!</span>
+    </div>
+
+    <!-- Scripts -->
+    <script src="kinematics.js"></script>
+    <script src="pid.js"></script>
+    <script src="sequencer.js"></script>
+    <script src="app.js"></script>
+    <script src="onboarding.js"></script>
+</body>
+</html>
