@@ -863,6 +863,15 @@ pre {
 
 /* Responsive adjustment */
 @media (max-width: 1200px) {
+    .side-panel {
+        width: 280px;
+    }
+    .right-panel {
+        width: 340px;
+    }
+    .header-status {
+        gap: 18px;
+    }
     .app-footer {
         grid-template-columns: repeat(3, 1fr);
         height: auto;
@@ -874,8 +883,139 @@ pre {
     .telemetry-tile:nth-child(4), .telemetry-tile:nth-child(5), .telemetry-tile:nth-child(6) {
         border-bottom: none;
     }
+}
+
+@media (max-width: 960px) {
+    .app-header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        row-gap: 10px;
+        padding: 12px 16px;
+    }
+    .header-logo {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .header-status {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        width: 100%;
+        justify-content: space-between;
+    }
+    .status-item {
+        align-items: flex-start;
+    }
+    .help-btn {
+        width: 100%;
+        justify-content: center;
+    }
     .app-main {
-        height: calc(100vh - var(--header-height) - 140px);
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+    }
+    .side-panel,
+    .center-content {
+        width: 100%;
+        min-height: 320px;
+        border-right: none;
+        border-left: none;
+    }
+    .right-panel {
+        width: 100%;
+        min-height: 420px;
+        border-left: none;
+        border-right: none;
+    }
+    .app-main > section {
+        border-bottom: 1px solid var(--border-color);
+    }
+    .viewport-wrapper {
+        min-height: 240px;
+    }
+    .telemetry-dashboard {
+        height: 180px;
+    }
+    .sequencer-controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .editor-tabs {
+        flex-wrap: wrap;
+    }
+    .editor-tab {
+        flex: 1 1 48%;
+    }
+    .welcome-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 720px) {
+    body {
+        font-size: 13px;
+        overflow-x: hidden;
+    }
+    .app-header {
+        padding: 12px 14px;
+    }
+    .app-header, .app-footer {
+        height: auto;
+    }
+    .panel-header {
+        padding: 0 12px;
+    }
+    .panel-content {
+        padding: 14px 12px;
+    }
+    .panel-header h2 {
+        font-size: 12px;
+    }
+    .task-selector-wrapper label,
+    .status-label,
+    .slider-header label,
+    .command-guide h4,
+    .tile-label {
+        font-size: 10px;
+    }
+    .status-val,
+    .tile-value {
+        font-size: 13px;
+    }
+    .telemetry-tile {
+        border-right: none;
+        padding: 12px;
+    }
+    .app-footer {
+        grid-template-columns: 1fr;
+        row-gap: 10px;
+    }
+    .viewport-controls {
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px;
+        left: 10px;
+        right: 10px;
+    }
+    .viewport-controls .control-btn {
+        width: 30px;
+        height: 30px;
+    }
+    .viewport-legend {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        padding: 8px;
+        font-size: 10px;
+    }
+    .help-btn {
+        font-size: 10px;
+        padding: 8px 10px;
+    }
+    .welcome-modal {
+        padding: 24px 20px;
+        max-width: 100%;
+        width: calc(100vw - 24px);
     }
 }
 
